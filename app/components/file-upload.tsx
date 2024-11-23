@@ -5,6 +5,13 @@ import { Upload, Loader2 } from 'lucide-react'
 import JSZip from 'jszip'
 import { WrapData } from '../types/wrap-data'
 
+interface SpotifyDataItem {
+  endTime: string
+  artistName: string
+  trackName: string
+  msPlayed: number
+}
+
 interface FileUploadProps {
   onDataProcessed: (data: WrapData) => void
 }
@@ -13,54 +20,53 @@ export default function FileUpload({ onDataProcessed }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-const processSpotifyData = async (jsonData: any): Promise<WrapData> => {
-  const totalListenTime = jsonData.reduce((total: number, item: any) => total + item.msPlayed, 0) / 3600000 // convert to hours
+  const processSpotifyData = async (jsonData: SpotifyDataItem[]): Promise<WrapData> => {
+    const totalListenTime = jsonData.reduce((total, item) => total + item.msPlayed, 0) / 3600000 // convert to hours
 
-  const artistPlayCounts: { [key: string]: number } = {}
-  const songPlayCounts: { [key: string]: number } = {}
-  const artistPlayTime: { [key: string]: number } = {}
-  const songPlayTime: { [key: string]: number } = {}
+    const artistPlayCounts: { [key: string]: number } = {}
+    const songPlayCounts: { [key: string]: number } = {}
+    const artistPlayTime: { [key: string]: number } = {}
+    const songPlayTime: { [key: string]: number } = {}
 
-  jsonData.forEach((item: any) => {
-    artistPlayCounts[item.artistName] = (artistPlayCounts[item.artistName] || 0) + 1
-    songPlayCounts[item.trackName] = (songPlayCounts[item.trackName] || 0) + 1
-    artistPlayTime[item.artistName] = (artistPlayTime[item.artistName] || 0) + item.msPlayed
-    songPlayTime[item.trackName] = (songPlayTime[item.trackName] || 0) + item.msPlayed
-  })
-  
+    jsonData.forEach((item) => {
+      artistPlayCounts[item.artistName] = (artistPlayCounts[item.artistName] || 0) + 1
+      songPlayCounts[item.trackName] = (songPlayCounts[item.trackName] || 0) + 1
+      artistPlayTime[item.artistName] = (artistPlayTime[item.artistName] || 0) + item.msPlayed
+      songPlayTime[item.trackName] = (songPlayTime[item.trackName] || 0) + item.msPlayed
+    })
 
-  const topArtistsByCount = Object.entries(artistPlayCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, count]) => ({ name, value: `${count} plays` }))
+    const topArtistsByCount = Object.entries(artistPlayCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, value: `${count} plays` }))
 
-  const topArtistsByTime = Object.entries(artistPlayTime)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, time]) => ({ name, value: `${Math.round(time / 3600000)} hours` }))
+    const topArtistsByTime = Object.entries(artistPlayTime)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, time]) => ({ name, value: `${Math.round(time / 3600000)} hours` }))
 
-  const topSongsByCount = Object.entries(songPlayCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, count]) => ({ name, value: `${count} plays` }))
+    const topSongsByCount = Object.entries(songPlayCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, value: `${count} plays` }))
 
-  const topSongsByTime = Object.entries(songPlayTime)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, time]) => ({ name, value: `${Math.round(time / 60000)} minutes` }))
+    const topSongsByTime = Object.entries(songPlayTime)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, time]) => ({ name, value: `${Math.round(time / 60000)} minutes` }))
 
-  return {
-    totalListenTime,
-    topArtistsByTime,
-    topArtistsByCount,
-    topSongsByTime,
-    topSongsByCount,
-    genresExplored: 0, // This information is not available in the provided data structure
-    newArtistsDiscovered: Object.keys(artistPlayCounts).length,
-    playlistsCreated: 0, // This information is not available in the provided data structure
-    songsLiked: 0, // This information is not available in the provided data structure
+    return {
+      totalListenTime,
+      topArtistsByTime,
+      topArtistsByCount,
+      topSongsByTime,
+      topSongsByCount,
+      genresExplored: 0, // This information is not available in the provided data structure
+      newArtistsDiscovered: Object.keys(artistPlayCounts).length,
+      playlistsCreated: 0, // This information is not available in the provided data structure
+      songsLiked: 0, // This information is not available in the provided data structure
+    }
   }
-}
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -73,7 +79,7 @@ const processSpotifyData = async (jsonData: any): Promise<WrapData> => {
       const zip = new JSZip()
       const contents = await zip.loadAsync(file)
       
-      let jsonData: any[] = []
+      let jsonData: SpotifyDataItem[] = []
 
       console.log('Files in zip:', Object.keys(contents.files))
 
@@ -81,7 +87,7 @@ const processSpotifyData = async (jsonData: any): Promise<WrapData> => {
         if (filename.startsWith('Spotify Account Data/StreamingHistory_music_') && filename.endsWith('.json')) {
           console.log('Processing file:', filename)
           const content = await file.async('string')
-          const parsed = JSON.parse(content)
+          const parsed: SpotifyDataItem[] = JSON.parse(content)
           jsonData = jsonData.concat(parsed)
         }
       }
@@ -133,4 +139,3 @@ const processSpotifyData = async (jsonData: any): Promise<WrapData> => {
     </div>
   )
 }
-
