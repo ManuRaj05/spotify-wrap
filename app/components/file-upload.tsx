@@ -134,7 +134,7 @@ export default function FileUpload({ onDataProcessed }: FileUploadProps) {
           disabled={isUploading}
         />
       </label>
-      <p className="text-sm text-gray-400 mt-2">Your data is processed in the browser and never leaves your device.</p>
+      <p className="text-sm text-gray-400 mt-2">Your data is processed in the browser and never leaves your browser.</p>
       {error && <p className="mt-4 text-red-500">{error}</p>}
     </div>
   )
